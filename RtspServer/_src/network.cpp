@@ -45,11 +45,6 @@ bool Network::NetPrepare(TransType type)
 {
     if(type == TCP || type == RTSP)
     {
-
-
-
-
-
         listener = evconnlistener_new_bind(evnbase, Listen_Cb,
                                            (void *)this, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
                                            -1, (struct sockaddr*)&sockinfo, sizeof(sockinfo));
@@ -84,7 +79,12 @@ bool Network::StartServer(bufferevent_data_cb preadcb, bufferevent_data_cb pwrit
 
 void Network::Signal_Cb(evutil_socket_t sig, short events, void *user_data)
 {
+  struct event_base *base = (struct event_base *)user_data;
+  struct timeval delay = { 2, 0 };
 
+  printf("Caught an interrupt signal; exiting cleanly in two seconds.\n");
+
+  event_base_loopexit(base, &delay);
 }
 
 void Network::Listen_Cb(evconnlistener *listen, evutil_socket_t fd,

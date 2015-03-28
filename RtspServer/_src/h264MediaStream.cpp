@@ -1,13 +1,13 @@
-#include "../_inc/stdhead.h"
-#include "../_inc/H264Data.h"
+#include "stdafx.h"
+#include "h264MediaStream.h"
 
 
-H264Data::H264Data()
+h264MediaStream::h264MediaStream()
 {
 	
 }
 
-unsigned H264Data::FindNal(const Buffer& buf, unsigned pos)
+unsigned h264MediaStream::FindNal(const Buffer& buf, unsigned pos)
 {
 	unsigned sta = pos;
 	const char* pdata = buf.GetBuffer();
@@ -29,7 +29,7 @@ unsigned H264Data::FindNal(const Buffer& buf, unsigned pos)
 			{
 				Buffer *NewNode = new Buffer(sta - pos);
 				NewNode->FullBuffer(buf, pos, sta - pos -1);
-				bufferlist.push_back(NewNode);
+				bufferlist.push(NewNode);
 
 				pos += sta - pos + (pdata[sta + 3]==0?2:3);
 				sta += (pdata[sta + 3]==0?2:3);
@@ -39,17 +39,18 @@ unsigned H264Data::FindNal(const Buffer& buf, unsigned pos)
 	return pos;
 }
 
-Buffer* H264Data::GetNal()
+Buffer* h264MediaStream::GetNode()
 {
 	if (bufferlist.size())
 	{
-		return bufferlist.at(0);
+		Buffer* ret = bufferlist.front();
+		bufferlist.pop();
+		return ret;
 	}
-
 	return NULL;
 }
 
-void H264Data::DealData()
+void h264MediaStream::PullNode(const Buffer& Pulldata)
 {
 	
 }
