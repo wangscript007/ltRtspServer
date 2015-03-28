@@ -1,13 +1,11 @@
-#include "../_inc/stdhead.h"
 #include "../_inc/network.h"
 
 
 Network::Network(struct sockaddr_in addr)
 {
-    assert(addr != NULL);
     sockinfo = addr;
     evnbase = event_base_new();
-    if(!base)
+    if(!evnbase)
     {
         //counld not init event base
     }
@@ -26,11 +24,12 @@ struct evconnlistener* Network::evconnlistener_new_udp_bind(evconnlistener_cb cb
         return NULL;
     }
 
-    if(bind(fd, (struct sockaddr)sockinfo, sizeof(sockinfo)) < 0){
+    if(bind(fd, (struct sockaddr *)&sockinfo, sizeof(sockinfo)) < 0){
         evutil_closesocket(fd);
         return NULL;
     }
-    onlistener = evconnlistener_new(evnbase, cb, (void*)base, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE, -1, fd);
+    onlistener = evconnlistener_new(evnbase, cb, (void*)evnbase,
+                                    LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE, -1, fd);
     if(!onlistener)
     {
         evutil_closesocket(fd);
@@ -39,24 +38,63 @@ struct evconnlistener* Network::evconnlistener_new_udp_bind(evconnlistener_cb cb
     return onlistener;
 }
 
-bool Network::NetPrepare(TransType type, unsigned needlisten, evconnlistener_cb pfunc)
+bool Network::NetPrepare(TransType type)
 {
     if(type == TCP || type == RTSP)
     {
 
-        listener = evconnlistener_new_bind(evnbase, pfunc,
-                                           (void *)base, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
+        listener = evconnlistener_new_bind(evnbase, Listen_Cb,
+                                           (void *)this, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
                                            -1, (struct sockaddr*)&sockinfo, sizeof(sockinfo));
         if(!listener)
+          {
+            printf("error listen\n");
             return false;
+          }
         return true;
     }
     else if(type == RTP || type == UDP)
     {
-        listener = evconnlistener_new_udp_bind(pfunc);
+        listener = evconnlistener_new_udp_bind(Listen_Cb);
         if(!listener)
             return false;
         return true;
     }
     return false;
 }
+
+bool Network::StartServer(bufferevent_data_cb preadcb, bufferevent_data_cb pwritecb)
+{
+    evn = evsignal_new(evnbase, SIGINT, Signal_Cb, (void *)evnbase);
+    if(evn == NULL || event_add(evn, NULL) < 0){ return false; }
+    readcb = preadcb;
+    writecb = pwritecb;
+    event_base_dispatch(evnbase);
+}
+
+void Network::Signal_Cb(evutil_socket_t sig, short events, void *user_data)
+{
+
+}
+
+void Network::Listen_Cb(evconnlistener *listen, evutil_socket_t fd,
+                               sockaddr *sa, int socklen, void *user_data)
+{
+    printf("a new connect \n");
+    Network *net = (Network *)user_data;
+    bufferevent *bev;
+
+    bev = bufferevent_socket_new(net->evnbase, fd, BEV_OPT_CLOSE_ON_FREE);
+
+    if(!bev){
+        printf("error when create buff sock\n");return ;
+    }
+    bufferevent_setcb(bev, net->readcb, net->writecb, NULL, NULL);
+    bufferevent_enable(bev, EV_READ);
+    bufferevent_disable(bev, EV_WRITE);
+
+
+
+}
+
+

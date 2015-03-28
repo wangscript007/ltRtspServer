@@ -5,11 +5,10 @@
 
 #pragma once
 
-#include "targetver.h"
 
 #include <stdio.h>
 #include <iostream>
-#include <cassert>
+#include<assert.h>
 #include <string.h>
 #include <sys/socket.h>
 
