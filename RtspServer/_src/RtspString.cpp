@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#include "RtspString.h"
+#include "../_inc/stdhead.h"
+#include "../_inc/RtspString.h"
 
 
 
@@ -53,38 +53,41 @@ unsigned rtsp_string::get_cseq(std::string& info,unsigned pos)
 	for (i = pos;i < info.size(); i++)
 	{
 		if (i < info.size() - 5		&&
-			decode_p[i]		== 'C'  && 
+			decode_p[i]	== 'C'  &&
 			decode_p[i + 1]	== 'S'	&&
 			decode_p[i + 2]	== 'e'  &&
 			decode_p[i + 3] == 'q'	&&
 			decode_p[i + 4] == ':'
 		)
-		{ i += 5;break; }
+		{ pos = i + 5;break; }
 	}
 	
 	char count[16] = {0};
 	bool startcount = false;
 	for (i = pos;i < info.size(); i++)
 	{
-		if (decode_p[i] != ' ' && !startcount)
-		{	
-			startcount = false;
-			count[psize ++] = decode_p[i];
-			continue;
-		}
-		if (decode_p[i] == '\r' || decode_p[i] == '\n')
-		{
-			if (startcount)
-			{
-				deal_info.cseq.clear();
-				deal_info.cseq.append(count);
-				return i;
-			}
-			else 
-				return 0;
-		}
-		count[psize ++] = decode_p[i];
-			
+	    if (decode_p[i] == ' ')
+	      continue;
+	    if (decode_p[i] != ' ' && !startcount)
+	    {
+	      startcount = true;
+	      count[psize ++] = decode_p[i];
+	      continue;
+	    }
+
+
+	    if (decode_p[i] == '\r' || decode_p[i] == '\n')
+	    {
+	      if (startcount)
+	      {
+            deal_info.cseq.clear();
+            deal_info.cseq.append(count);
+            return i;
+	      }
+	      else
+		return 0;
+	    }
+	    count[psize ++] = decode_p[i];
 	}
 	return 0;
 }
@@ -100,7 +103,7 @@ void rtsp_string::deal_string(std::string& info)
 	for (i = 0;i < info.size(); i++)
 	{
 		if (i < info.size() - 5		&&
-			decode_p[i]		== ' '  && 
+			decode_p[i]	== ' '  &&
 			decode_p[i + 1]	== 'r'	&&
 			decode_p[i + 2]	== 't'  &&
 			decode_p[i + 3] == 's'	&&
@@ -111,15 +114,14 @@ void rtsp_string::deal_string(std::string& info)
 	
 	if(i > info.size() - 5)
 		return ;
-
 	for (i = 0;i < pos; i++)
 	{
 		switch(decode_p[i])
 		{
 		case 'O':
 			if (decode_p[i + 1] == 'P' && decode_p[i + 2] == 'T' &&
-				decode_p[i + 3] == 'I' && decode_p[i + 4] == 'O' &&
-				decode_p[i + 5] == 'N' && decode_p[i + 6] == 'S')
+			    decode_p[i + 3] == 'I' && decode_p[i + 4] == 'O' &&
+			    decode_p[i + 5] == 'N' && decode_p[i + 6] == 'S')
 			{
 				//OPTIONS
 				deal_info.type = OPTIONS;
@@ -127,9 +129,9 @@ void rtsp_string::deal_string(std::string& info)
 			break;
 		case 'D':
 			if (decode_p[i + 1] == 'E' && decode_p[i + 2] == 'S' &&
-				decode_p[i + 3] == 'C' && decode_p[i + 4] == 'R' &&
-				decode_p[i + 5] == 'I' && decode_p[i + 6] == 'B' &&
-				decode_p[i + 7] == 'E')
+			    decode_p[i + 3] == 'C' && decode_p[i + 4] == 'R' &&
+			    decode_p[i + 5] == 'I' && decode_p[i + 6] == 'B' &&
+			    decode_p[i + 7] == 'E')
 			{
 				//DESCRIBE
 				deal_info.type = DESCRIBE;
@@ -137,7 +139,7 @@ void rtsp_string::deal_string(std::string& info)
 			break;
 		case 'S':
 			if (decode_p[i + 1] == 'E' && decode_p[i + 2] == 'T' &&
-				decode_p[i + 3] == 'U' && decode_p[i + 4] == 'P')
+			    decode_p[i + 3] == 'U' && decode_p[i + 4] == 'P')
 			{
 				//SETUP
 				deal_info.type = SETUP;
@@ -145,16 +147,16 @@ void rtsp_string::deal_string(std::string& info)
 			break;
 		case 'T':
 			if (decode_p[i + 2] == 'E' &&
-				decode_p[i + 3] == 'A' && decode_p[i + 4] == 'R' &&
-				decode_p[i + 5] == 'D' && decode_p[i + 6] == 'O' &&
-				decode_p[i + 7] == 'W' && decode_p[i + 8] == 'N')
+			    decode_p[i + 3] == 'A' && decode_p[i + 4] == 'R' &&
+			    decode_p[i + 5] == 'D' && decode_p[i + 6] == 'O' &&
+			    decode_p[i + 7] == 'W' && decode_p[i + 8] == 'N')
 			{
 				deal_info.type = TEARDOWN;
 			}
 			break;
 		case 'P':
 			if (decode_p[i + 1] == 'L' && decode_p[i + 2] == 'A' &&
-				decode_p[i + 3] == 'Y')
+			    decode_p[i + 3] == 'Y')
 			{
 				deal_info.type = PLAY;
 			}
@@ -171,17 +173,16 @@ void rtsp_string::deal_string(std::string& info)
 
 	if (deal_info.type == ERRORTYPE)
 		return;
-
 	pos = get_addr(info, pos + 7);
 	if (!pos)
 		return;
 	pos = get_filepath(info, pos);
 	if (!pos)
 		return;
+
 	pos = get_cseq(info, pos);
 	if (!pos)
-		
-	return;
+		return;
 	
 
 	
@@ -199,8 +200,9 @@ bool rtsp_string::deal_options(std::string& info)
 	info.clear();
 
 	info.append("RTSP/1.0 200 OK\r\nCSeq: ");
-	info.append(deal_info.cseq);
-	info.append("\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, OPTIONS, ANNOUNCE, RECORD\r\n");
+    printf("CSEQ COUNT:%s\n", deal_info.cseq.c_str());
+    info.append(deal_info.cseq.c_str());
+    info.append("\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n");
 
 	return true;
 
@@ -215,8 +217,6 @@ bool rtsp_string::deal_describe(std::string& info)
 	info.append("CSeq: ");
 	info.append(deal_info.cseq);
 	info.append("\r\n");
-	std::string sdpinfo;
-	create_sdp(sdpinfo);
 	
 	return true;
 

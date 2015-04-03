@@ -27,10 +27,11 @@ class rtsp_string
 {
 public:
 	explicit rtsp_string();
-	
+	void deal_string(std::string& info);
+	~rtsp_string();
 	const rtspinfo& deal_requset(std::string& info);
 protected:
-	void deal_string(std::string& info);
+
 	bool create_sdp(std::string& info);
 	
 	bool deal_options(std::string& info);
@@ -45,10 +46,7 @@ protected:
 	unsigned get_cseq(std::string& info,unsigned pos);
 	
 private:
-
-	~rtsp_string();
-	//std::string sdpstring;
-
+	//std::string sdpstring
 	rtspinfo deal_info;
 
 };

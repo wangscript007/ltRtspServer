@@ -1,5 +1,6 @@
-#include "../_inc/network.h"
-
+#include "stdafx.h"
+#include "network.h"
+#include "MediaSession.h"
 
 Network::Network(struct sockaddr_in addr)
 {
@@ -75,6 +76,7 @@ bool Network::StartServer(bufferevent_data_cb preadcb, bufferevent_data_cb pwrit
     readcb = preadcb;
     writecb = pwritecb;
     event_base_dispatch(evnbase);
+	return true;
 }
 
 void Network::Signal_Cb(evutil_socket_t sig, short events, void *user_data)
@@ -99,11 +101,11 @@ void Network::Listen_Cb(evconnlistener *listen, evutil_socket_t fd,
     if(!bev){
         printf("error when create buff sock\n");return ;
     }
-    bufferevent_setcb(bev, net->readcb, net->writecb, NULL, NULL);
-    bufferevent_enable(bev, EV_READ);
-    bufferevent_disable(bev, EV_WRITE);
 
+	MediaSession* session = new MediaSession(net);
 
+    bufferevent_setcb(bev, net->readcb, net->writecb, NULL, session);
+    bufferevent_enable(bev, EV_READ | EV_WRITE);
 
 }
 

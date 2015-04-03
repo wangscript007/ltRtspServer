@@ -8,7 +8,7 @@ SOURCES += main.cpp \
 HEADERS += ./_inc/*.h \
     _inc/network.h
 SOURCES += ./_src/MediaBuffer.cpp ./_src/MediaSession.cpp ./_src/RtpTrans.cpp
-SOURCES += ./_src/H264Data.cpp ./_src/HardDiskRead.cpp
+SOURCES += ./_src/HardDiskRead.cpp ./_src/RtspString.cpp
 INCLUDEPATH += /usr/include
 LIBS += -L//usr/lib/ -levent
 

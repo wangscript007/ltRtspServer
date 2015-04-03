@@ -7,7 +7,12 @@ h264MediaStream::h264MediaStream()
 	
 }
 
-unsigned h264MediaStream::FindNal(const Buffer& buf, unsigned pos)
+h264MediaStream::~h264MediaStream()
+{
+
+}
+
+void h264MediaStream::DevNode(const Buffer& buf, unsigned pos)
 {
 	unsigned sta = pos;
 	const char* pdata = buf.GetBuffer();
@@ -23,20 +28,19 @@ unsigned h264MediaStream::FindNal(const Buffer& buf, unsigned pos)
 			if (NalFlag)
 			{
 				NalFlag = true;
-				sta += pdata[sta + 3]==0?2:3;
+				sta += (pdata[sta + 3]==0?2:3);
 			}
 			else
 			{
 				Buffer *NewNode = new Buffer(sta - pos);
 				NewNode->FullBuffer(buf, pos, sta - pos -1);
 				bufferlist.push(NewNode);
-
 				pos += sta - pos + (pdata[sta + 3]==0?2:3);
 				sta += (pdata[sta + 3]==0?2:3);
 			}
 		}
 	}
-	return pos;
+	//return pos;
 }
 
 Buffer* h264MediaStream::GetNode()
