@@ -1,5 +1,6 @@
-#include "stdafx.h"
+#include "stdhead.h"
 #include "MediaStream.h"
+
 
 MediaStream::MediaStream()
 {
@@ -16,15 +17,19 @@ void MediaStream::AddNode()
 
 }
 
-void MediaStream::DevNode()
+void MediaStream::DevNode(const Buffer& buf, unsigned pos)
 {
 
 }
 
-Buffer* MediaStream::GetNode()
+buf_share_ptr MediaStream::GetNode()
 {
 	return NULL;
 }
 
 
+const unsigned MediaStream::GetListLen()const
+{
+	return bufferlist.size();
+}
 

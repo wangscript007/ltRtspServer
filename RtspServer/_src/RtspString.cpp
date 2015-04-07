@@ -1,13 +1,14 @@
-#include "../_inc/stdhead.h"
-#include "../_inc/RtspString.h"
-
+#include "stdhead.h"
+#include "RtspString.h"
+#include "MediaCreateSdp.h"
 
 
 rtsp_string::rtsp_string(){}
 
 rtsp_string::~rtsp_string(){}
 
-unsigned rtsp_string::get_addr(std::string& info,unsigned pos)
+unsigned 
+rtsp_string::get_addr(std::string& info,unsigned pos)
 {
 	const char* decode_p = info.c_str();
 	char addr[128] = {0};
@@ -20,16 +21,19 @@ unsigned rtsp_string::get_addr(std::string& info,unsigned pos)
 			deal_info.addr.append(addr);
 			return i + 1;
 		}
-		addr[psize ++] = *(decode_p + i);
+		addr[psize ++] = decode_p[i];
 	}
 	return 0;
 }
 
-unsigned rtsp_string::get_filepath(std::string& info,unsigned pos)
+unsigned 
+rtsp_string::get_filepath(std::string& info,unsigned pos)
 {
 	const char* decode_p = info.c_str();
-	unsigned i,psize = 0;
+	unsigned	i,psize  = 0;
+	
 	char path[128] = {0};
+	
 	for (i = pos;i < info.size();i++)
 	{
 		if (decode_p[i] == ' ')
@@ -46,14 +50,15 @@ unsigned rtsp_string::get_filepath(std::string& info,unsigned pos)
 
 
 
-unsigned rtsp_string::get_cseq(std::string& info,unsigned pos)
+unsigned 
+rtsp_string::get_cseq(std::string& info,unsigned pos)
 {
 	const char* decode_p = info.c_str();
 	unsigned i,psize = 0;
 	for (i = pos;i < info.size(); i++)
 	{
 		if (i < info.size() - 5		&&
-			decode_p[i]	== 'C'  &&
+			decode_p[i]		== 'C'	&&
 			decode_p[i + 1]	== 'S'	&&
 			decode_p[i + 2]	== 'e'  &&
 			decode_p[i + 3] == 'q'	&&
@@ -62,20 +67,19 @@ unsigned rtsp_string::get_cseq(std::string& info,unsigned pos)
 		{ pos = i + 5;break; }
 	}
 	
-	char count[16] = {0};
+	char count[16]  = {0};
 	bool startcount = false;
+
 	for (i = pos;i < info.size(); i++)
 	{
 	    if (decode_p[i] == ' ')
 	      continue;
-	    if (decode_p[i] != ' ' && !startcount)
-	    {
-	      startcount = true;
-	      count[psize ++] = decode_p[i];
-	      continue;
-	    }
-
-
+		if (decode_p[i] != ' ' && !startcount)
+		{
+			startcount = true;
+			count[psize ++] = decode_p[i];
+			continue;
+		}
 	    if (decode_p[i] == '\r' || decode_p[i] == '\n')
 	    {
 	      if (startcount)
@@ -85,7 +89,7 @@ unsigned rtsp_string::get_cseq(std::string& info,unsigned pos)
             return i;
 	      }
 	      else
-		return 0;
+			return 0;
 	    }
 	    count[psize ++] = decode_p[i];
 	}
@@ -95,15 +99,16 @@ unsigned rtsp_string::get_cseq(std::string& info,unsigned pos)
 
 
 
-void rtsp_string::deal_string(std::string& info)
+void 
+rtsp_string::deal_string(std::string& info)
 {
 	deal_info.type = ERRORTYPE;
 	const char* decode_p = info.c_str();
-	unsigned i,pos;
+	unsigned i,pos = 0;
 	for (i = 0;i < info.size(); i++)
 	{
 		if (i < info.size() - 5		&&
-			decode_p[i]	== ' '  &&
+			decode_p[i]		== ' '  &&
 			decode_p[i + 1]	== 'r'	&&
 			decode_p[i + 2]	== 't'  &&
 			decode_p[i + 3] == 's'	&&
@@ -161,7 +166,7 @@ void rtsp_string::deal_string(std::string& info)
 				deal_info.type = PLAY;
 			}
 			else if (decode_p[i + 1] == 'A' && decode_p[i + 1] == 'U' && 
-				decode_p[i + 2] == 'S'  &&decode_p[i + 3] == 'E')
+					 decode_p[i + 2] == 'S' && decode_p[i + 3] == 'E')
 			{
 				deal_info.type = PAUSE;
 			}
@@ -173,13 +178,12 @@ void rtsp_string::deal_string(std::string& info)
 
 	if (deal_info.type == ERRORTYPE)
 		return;
-	pos = get_addr(info, pos + 7);
+	pos = get_addr(info, pos + 8);
 	if (!pos)
 		return;
 	pos = get_filepath(info, pos);
 	if (!pos)
 		return;
-
 	pos = get_cseq(info, pos);
 	if (!pos)
 		return;
@@ -190,17 +194,18 @@ void rtsp_string::deal_string(std::string& info)
 
 
 
-bool rtsp_string::create_sdp(std::string& info)
+bool 
+rtsp_string::create_sdp(std::string& info)
 {
 	return true;
 }
 
-bool rtsp_string::deal_options(std::string& info)
+bool 
+rtsp_string::deal_options(std::string& info)
 {
 	info.clear();
 
 	info.append("RTSP/1.0 200 OK\r\nCSeq: ");
-    printf("CSEQ COUNT:%s\n", deal_info.cseq.c_str());
     info.append(deal_info.cseq.c_str());
     info.append("\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n");
 
@@ -210,42 +215,72 @@ bool rtsp_string::deal_options(std::string& info)
 
 
 
-bool rtsp_string::deal_describe(std::string& info)
+bool 
+rtsp_string::deal_describe(std::string& info)
 {
 	info.clear();
 	info.append("RTSP/1.0 200 OK\r\n");
 	info.append("CSeq: ");
 	info.append(deal_info.cseq);
 	info.append("\r\n");
+	info.append("Server: ltRtspService\r\n");
+
+	char MoreDiscribe[256] = {0};
+    snprintf(MoreDiscribe, 256, "Content-Base: rtsp://%s/%s\r\n", deal_info.addr.c_str(), deal_info.file_path.c_str());
+	info.append(MoreDiscribe);
 	
-	return true;
-
+	info.append("Content-Type: application/sdp\r\n");
+	info.append("Content-Length: content_count\r\n\r\n");
+	
+	std::string SdpInfo;
+	
+	if (MediaCreateSdp::GetInstance(deal_info.file_path)->GetSdp(deal_info.file_path, &SdpInfo))
+	{
+		//printf("\n\n\nSdpInfo:\n%s\n", SdpInfo.c_str());
+		info.append(SdpInfo);
+		return true;
+	}
+	else
+	{
+		printf("Rtsp Sdp Info Not Found!\n");
+		info.clear();
+		info.append("RTSP 404\r\n");
+		deal_info.type = ERRORTYPE;
+		return false;
+	}
 }
 
-bool rtsp_string::deal_setup(std::string& info)
+bool 
+rtsp_string::deal_setup(std::string& info)
+{
+
+	return true;
+}
+
+bool 
+rtsp_string::deal_play(std::string& info)
 {
 	return true;
 }
 
-bool rtsp_string::deal_play(std::string& info)
+bool 
+rtsp_string::deal_pause(std::string& info)
 {
 	return true;
 }
 
-bool rtsp_string::deal_pause(std::string& info)
+bool 
+rtsp_string::deal_teardown(std::string& info)
 {
 	return true;
 }
 
-bool rtsp_string::deal_teardown(std::string& info)
-{
-	return true;
-}
 
-
-const rtspinfo& rtsp_string::deal_requset(std::string& info)
+const rtspinfo& 
+rtsp_string::deal_requset(std::string& info)
 {
 	deal_string(info);
+
 	switch(deal_info.type)
 	{
 	case OPTIONS:

@@ -20,6 +20,8 @@ typedef struct _rtspinfo
 	std::string file_path;
 	std::string	cseq;
 	unsigned int session;
+	unsigned int clientport;
+
 }rtspinfo;
 
 //用于处理Rtsp数据

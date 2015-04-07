@@ -1,5 +1,10 @@
 #pragma once
 #include <iostream>
+#include <smart_ptr/boost/shared_ptr.hpp>
+
+
+class Buffer;
+typedef boost::shared_ptr<Buffer> buf_share_ptr;
 
 enum BUFLOG
 {
@@ -17,35 +22,34 @@ public:
 	explicit Buffer(unsigned mtu = 1480);
 	Buffer(const Buffer& ibuffer);
 	
-	const Buffer& operator=(const Buffer& ibuffer);
+	static buf_share_ptr CreateBuf(unsigned mtu = 1480);
+	const unsigned char* GetBuffer() const;
+
 
 	unsigned GetMtuValue() const;
 	unsigned GetPosValue() const;
-	const char* GetBuffer() const;
-	bool Clear();
-	void SetByte(unsigned char byteSet, unsigned pos);
+	unsigned GetSizeValue()const;
+
 	unsigned char GetByte(unsigned pos);
-	inline bool FullBuffer(const char* buffer,int lenth);
+	void SetByte(unsigned char byteSet, unsigned pos);
+
+	bool CopyData(unsigned char* dst, int length);
+	bool Clear();
+	
+	inline bool FullBuffer(const unsigned char* buffer,unsigned lenth);
 	bool FullBuffer(const Buffer& buf,unsigned start,unsigned length);
-protected:
+	bool FullBuffer(const buf_share_ptr buf,unsigned start,unsigned length);
+
 	virtual ~Buffer();
+protected:
+	const Buffer& operator=(const Buffer& ibuffer);
 
 private:
-	char *pbuffer;
+	unsigned char *pbuffer;
 	unsigned short pos;
 	unsigned MTU;
 };
 
-class MediaBuffer : public Buffer
-{
-public:
-	explicit MediaBuffer(unsigned mtu):Buffer(mtu){}
-	//virtual bool PutInBuffer(const char* buffer,int length);
-
-protected:
-	virtual ~MediaBuffer();
-	BUFLOG log;
-};
 
 
 
