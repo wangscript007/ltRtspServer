@@ -10,9 +10,10 @@ class MediaSession
 {
 public:
 	
-	static void Send(struct bufferevent *bev, void *ctx);
-	static void Recv(struct bufferevent *bev, void *ctx);
+    static void Send(evutil_socket_t fd, short events, void *arg);
+    static void Recv(evutil_socket_t fd, short events, void *arg);
 
+    void DealRtsp(struct bufferevent* bev);
 	void SetDescribe();
     static long long GenSessionID();
 	explicit MediaSession(Network *pwork):work(pwork){};

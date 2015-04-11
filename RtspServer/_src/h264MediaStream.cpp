@@ -363,7 +363,7 @@ h264MediaStream::h264Base64Ps(buf_share_ptr buf, std::string& psbase)
 {
 	assert(buf);
 	unsigned short t = buf->GetPosValue();
-	BaseEncoder::Base64Encode((PBYTE)buf->GetBuffer(), buf->GetSizeValue(), &psbase);
+    BaseEncoder::Base64Encode((uint8_t*)buf->GetBuffer(), buf->GetSizeValue(), &psbase);
 	return true;
 }
 
@@ -377,7 +377,9 @@ h264MediaStream::GetNode()
 		buf_share_ptr retptr(ret);
 		return retptr;
 	}
-	return NULL;
+    buf_share_ptr ret;
+    ret.reset();
+    return ret;
 }
 
 void 

@@ -5,21 +5,27 @@
 long long
 MediaSession::GenSessionID()
 {
+    /*
+    static LARGE_INTEGER	tickFrequency;
+    static BOOL				tickFrequencySet = FALSE;
 
-	static LARGE_INTEGER	tickFrequency;
-	static BOOL				tickFrequencySet = FALSE;
+    LARGE_INTEGER	tickNow;
 
-	LARGE_INTEGER	tickNow;
+    if (tickFrequencySet == FALSE)
+    {
+        QueryPerformanceFrequency(&tickFrequency);
+        tickFrequencySet = TRUE;
+    }
+    QueryPerformanceCounter(&tickNow);
 
-	if (tickFrequencySet == FALSE) 
-	{
-		QueryPerformanceFrequency(&tickFrequency);
-		tickFrequencySet = TRUE;
-	}
-	QueryPerformanceCounter(&tickNow);
+    //return (INT32)(tickNow.QuadPart / tickFrequency.QuadPart);
+    return tickNow.QuadPart;
+    */
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    long long value = start.tv_sec<<32|start.tv_usec;
 
-	//return (INT32)(tickNow.QuadPart / tickFrequency.QuadPart);
-	return tickNow.QuadPart;
+    return (long long)value;
 }
 
 void 
@@ -28,7 +34,8 @@ MediaSession::SetDescribe()
 	unsigned p = 0;
 	char SessionId[48] = {0};
 	sessionid = GenSessionID();
-    snprintf(SessionId, 48, "%I64u", sessionid);
+    snprintf(SessionId, 48, "%llu", sessionid);
+    printf("\nValue Of Session: %llu\n", sessionid);
 	//Ìæ»»
 	while ((p = rtspinc.find("sessionforreplace")) != std::string::npos)
 	{
@@ -68,50 +75,70 @@ MediaSession::SetDescribe()
 }
 
 
-void 
-MediaSession::Recv(struct bufferevent *bev, void *ctx)
+void
+MediaSession::DealRtsp(struct bufferevent* bev)
 {
-	MediaSession *session = (MediaSession *)ctx;
-	char pstring[1480] = {0};
-	
-	if(bufferevent_read(bev, pstring, 1480))
-	{
-		//printf("Get New Node:\n%s\n", pstring);
-		session->rtspinc.append(pstring);
+    char pstring[1480] = {0};
 
-		if ( session->rtspinc.find("\r\n\r\n") != std::string::npos )
-		{
-			printf("IN<<\n%s\n", session->rtspinc.c_str());
-			if(session->rs.deal_requset(session->rtspinc).type == DESCRIBE)
-			{
-				session->SetDescribe();
-				int p = session->rtspinc.find("\r\n\r\n");
-				bufferevent_write( bev, session->rtspinc.c_str(), p + 2 );
-				bufferevent_write( bev, "\r\n", 2);
-				bufferevent_write( bev, session->rtspinc.c_str() + (p + 4), (session->rtspinc.size() - p - 4));
-				//bufferevent_write( bev, "\r\n", 2);
-			}
-			else
-			{
-				bufferevent_write( bev, session->rtspinc.c_str(), session->rtspinc.size() );
-				bufferevent_write( bev, "\r\n", 2);
-			}
+    if(bev && bufferevent_read(bev, pstring, 1480))
+    {
+        //printf("Get New Node:\n%s\n", pstring);
+        rtspinc.append(pstring);
+        if ( rtspinc.find("\r\n\r\n") != std::string::npos )
+        {
+            printf("IN<<\n%s\n", rtspinc.c_str());
 
-			printf("OUT>>\n%s\n", session->rtspinc.c_str());
-			
-			session->rtspinc.clear();
-		}
-	}
+            if(rs.deal_requset(rtspinc).type == DESCRIBE)
+            {
+                SetDescribe();
+                int p = rtspinc.find("\r\n\r\n");
+                bufferevent_write( bev, rtspinc.c_str(), p + 2 );
+                bufferevent_write( bev, "\r\n", 2);
+                bufferevent_write( bev, rtspinc.c_str() + (p + 4), (rtspinc.size() - p - 4));
+                //bufferevent_write( bev, "\r\n", 2);
+            }
+            else
+            {
+                bufferevent_write( bev, rtspinc.c_str(), rtspinc.size() );
+                bufferevent_write( bev, "\r\n", 2);
+            }
+            printf("OUT>>\n%s\n", rtspinc.c_str());
+            rtspinc.clear();
+        }
+    }
 }
 
-void 
-MediaSession::Send(struct bufferevent *bev, void *ctx)
+void
+MediaSession::Recv(evutil_socket_t fd, short events, void *arg)
 {
-	MediaSession *session = (MediaSession *)ctx;
-	//printf("Send OK\n");
-	//session->rtspinc.clear();
+    char tmp[64] = {0};
+    recv(fd, tmp, 64, 0);
+    TWork* work = (TWork *)arg;
+    //printf("PID : %d\n", work->pid);
+    PQNode node = MesQueue::GetInstance()->OutQueue();
+    while (node != NULL)
+    {
+
+        if (node->type == TCP && node->events == EV_READ)
+        {
+            assert(node->forbev && node->arg);
+            MediaSession* ses = (MediaSession *)node->arg;
+            bufferevent_lock((struct bufferevent *)node->forbev);
+            ses->DealRtsp((struct bufferevent *)node->forbev);
+            bufferevent_unlock((struct bufferevent *)node->forbev);
+            delete node;
+        }
+        node = MesQueue::GetInstance()->OutQueue();
+    }
 }
 
+void
+MediaSession::Send(evutil_socket_t fd, short events, void *arg)
+{
+    //MediaSession *session = (MediaSession *)ctx;
+    //printf("Send OK\n");
+    //session->rtspinc.clear();
+}
 
 
 MediaSession::~MediaSession()

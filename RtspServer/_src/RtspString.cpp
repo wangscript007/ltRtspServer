@@ -253,7 +253,34 @@ rtsp_string::deal_describe(std::string& info)
 bool 
 rtsp_string::deal_setup(std::string& info)
 {
-
+    const char* decode_p = info.c_str();
+    int pos;
+    deal_info.streamid = 0;
+    deal_info.clientport = 0;
+    pos = info.find("trackID=");
+    if(pos != std::string::npos)
+    {
+        //int end = info.find_first_of(" ", pos);
+        int i = pos + 8;
+        while(decode_p[i] >= '0' && decode_p[i] <= '9')
+        {
+            deal_info.streamid = deal_info.streamid*10 + decode_p[i] - '0';
+            i++;
+        }
+    }
+    printf("StreamId = %d\n", deal_info.streamid);
+    pos = info.find("client_port=");
+    if(pos != std::string::npos)
+    {
+        int i = pos + 12;
+        while(decode_p[i] >= '0' && decode_p[i] <= '9')
+        {
+            //printf("%c\n", decode_p[i]);
+            deal_info.clientport = deal_info.clientport*10 + decode_p[i] - '0';
+            i++;
+        }
+    }
+    printf("client_port = %d\n", deal_info.clientport);
 	return true;
 }
 

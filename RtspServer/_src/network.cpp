@@ -69,12 +69,36 @@ bool Network::NetPrepare(TransType type)
     return false;
 }
 
-bool Network::StartServer(bufferevent_data_cb preadcb, bufferevent_data_cb pwritecb)
+bool Network::StartServer(event_callback_fn preadcb, event_callback_fn pwritecb)
 {
     evn = evsignal_new(evnbase, SIGINT, Signal_Cb, (void *)evnbase);
     if(evn == NULL || event_add(evn, NULL) < 0){ return false; }
     readcb = preadcb;
     writecb = pwritecb;
+
+    for (int i = 0; i < MAX_WORK ; i++)
+    {
+        int ret = socketpair(AF_LOCAL, SOCK_STREAM, 0, twork[i].evpush);
+        printf("Socket Pair: %d\n", ret);
+        twork[i].pid = i;
+        twork[i].base = event_base_new();
+        twork[i].callback = readcb;
+        twork[i].evn = event_new(twork[i].base, twork[i].evpush[1], EV_READ | EV_PERSIST, readcb, &twork[i]);
+        event_base_set(twork[i].base, twork[i].evn);
+        if (event_add(twork[i].evn, 0) == -1)
+        {
+            perror("Error Add Work Thread Event!");
+        }
+        MesQueue::GetInstance()->InsertWork(twork[i].evpush[0]);
+
+    }
+
+    for (int i = 0; i < MAX_WORK ; i++)
+    {
+        pthread_create(&twork[i].ptid, NULL, MultiWork, &twork[i]);
+    }
+    printf("Work Thread Create\n");
+
     event_base_dispatch(evnbase);
 	return true;
 }
@@ -104,9 +128,181 @@ void Network::Listen_Cb(evconnlistener *listen, evutil_socket_t fd,
 
 	MediaSession* session = new MediaSession(net);
 
-    bufferevent_setcb(bev, net->readcb, net->writecb, NULL, session);
+    bufferevent_setcb(bev, Tcp_Read_Cb, Tcp_Write_Cb, Event_Cb, session);
     bufferevent_enable(bev, EV_READ | EV_WRITE);
 
 }
 
 
+
+void
+Network::Event_Cb(struct bufferevent *bev, short events, void *user_data)
+{
+    if (events & BEV_EVENT_EOF) {
+        printf("Connection closed.\n");
+    } else if (events & BEV_EVENT_ERROR) {
+        printf("Got an error on the connection: \n");/*XXX win32*/
+    }
+    /* None of the other events can happen here, since we haven't enabled
+     * timeouts */
+    bufferevent_free(bev);
+    //MediaSession * ses = (MediaSession *)user_data;
+    //MediaSessionList::GetInstance()->RemoveSession(ses->GetSessionID());
+}
+
+void
+Network::Tcp_Read_Cb(struct bufferevent *bev, void *user_data)
+{
+    assert(bev);
+
+    PQNode newnode = new QNode;
+    newnode->type = TCP;
+    newnode->events = EV_READ;
+    newnode->forbev = bev;
+    newnode->arg = user_data;
+    MesQueue::GetInstance()->InsertQueue(newnode);
+}
+
+void
+Network::Tcp_Write_Cb(struct bufferevent *bev, void *user_data)
+{
+    /*printf("Write Done!\n");
+    assert(bev);
+    PQNode newnode = new QNode;
+    newnode->type = TCP;
+    newnode->events = EV_WRITE;
+    newnode->forbev = bev;
+    newnode->arg = user_data;
+    MesQueue::GetInstance()->InsertQueue(newnode);*/
+}
+
+
+
+
+
+void *
+Network::MultiWork(void* pvoid)
+{
+    printf("Work Thread Create Done\n");
+    TWork* work = (TWork *)pvoid;
+    event_base_dispatch(work->base);
+    event_base_free(work->base);
+    return 0;
+}
+
+
+
+void
+MesQueue::MulticastInfo()
+{
+    for (int i = 0; i < MAX_WORK; i++)
+    {
+        if (workfd[i] != 0)
+        {
+            send(workfd[i], "o", sizeof("o") - 1, NULL);
+        }
+    }
+}
+
+void
+MesQueue::InsertQueue(PQNode InsNode)
+{
+    assert(InsNode);
+    MesLock();
+    /*if(QList.size() < MAX_WORK)
+    {
+    MulticastInfo();
+    }*/
+    QList.push(InsNode);
+    //printf("Qlist Ins:%d\n", QList.size());
+
+    MesUnLock();
+    MulticastInfo();
+}
+
+PQNode
+MesQueue::OutQueue()
+{
+    PQNode node = NULL;
+    MesLock();
+    if (QList.size())
+    {
+        node = QList.front();
+        QList.pop();
+        //printf("Qlist Out:%d\n", QList.size());
+    }
+    MesUnLock();
+    return node;
+}
+
+bool
+MesQueue::InsertWork(evutil_socket_t fd)
+{
+    bool flag = false;
+    MesLock();
+    if (fd > 0 && WorkCount < MAX_WORK)
+    {
+        for (int i = 0; i < MAX_WORK ; i++)
+        {
+            if (workfd[i] == 0)
+            {
+                workfd[i] = fd;
+                WorkCount ++;
+                flag = true;
+                break;
+            }
+        }
+    }
+    MesUnLock();
+    return flag;
+}
+
+bool
+MesQueue::DeleteWork(evutil_socket_t fd)
+{
+    bool flag = false;
+    MesLock();
+    for (int i = 0; i < MAX_WORK ; i++)
+    {
+        if (workfd[i] == fd)
+        {
+            workfd[i] = 0;
+            WorkCount --;
+            flag = true;
+        }
+    }
+    MesUnLock();
+    return flag;
+}
+
+MesQueue*
+MesQueue::GetInstance()
+{
+    static MesQueue* que = NULL;
+    if (que == NULL)
+    {
+        que = new MesQueue;
+        return que;
+    }
+    return que;
+}
+
+
+MesQueue::MesQueue(){
+    pthread_mutex_init(&QueueLock, NULL);
+    WorkCount = 0;
+    memset(workfd, 0, sizeof(workfd));
+}
+void MesQueue::MesLock(){pthread_mutex_lock(&QueueLock);}
+void MesQueue::MesUnLock(){pthread_mutex_unlock(&QueueLock);}
+MesQueue::~MesQueue()
+{
+    MesLock();
+    while(QList.size())
+    {
+        delete QList.front();
+        QList.pop();
+    }
+    MesUnLock();
+    pthread_mutex_destroy(&QueueLock);
+}

@@ -17,5 +17,7 @@ MediaStreamBuild::CreateNew(const string& MediaExt, MediaType& Type)
 		media_stream_ptr p(Builder);
 		return p;
 	}
-	return NULL;
+    media_stream_ptr p;
+    p.reset();
+    return p;
 }

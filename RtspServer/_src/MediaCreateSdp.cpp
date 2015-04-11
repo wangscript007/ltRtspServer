@@ -3,6 +3,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <sys/mman.h>
 #endif // _WIN32
 
 
@@ -36,7 +38,7 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 {
     char filename[256] = {0};
     char ext[256] = {0};
-
+    /*
     _splitpath(path.c_str(), NULL, NULL, filename, ext);
 	
 	HANDLE m_hVideoFile = CreateFile(path.c_str(), 
@@ -46,17 +48,31 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 		OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,
 		NULL);
+        */
 	do 
 	{
+        /*
 		if (m_hVideoFile == INVALID_HANDLE_VALUE) 
 		{
 			perror(filename);
 			break;
 		}
-
+        */
 		//只读取前4096个字节做分析
 		unsigned char valuetmp[4096] = {0};
-		
+        FILE* filefd = fopen("test.h264","r");
+
+        //mmap(valuetmp, 4096, PROT_READ, MAP_SHARED, filefd, 0);
+        filename[0] = 'T';
+        filename[1] = 'e';
+        filename[2] = 's';
+        filename[3] = 't';
+
+        ext[0] = '.';
+        ext[1] = 'h';
+        ext[2] = '2';
+        ext[3] = '6';
+        ext[4] = '4';
 		string sdpall;
 		sdpall.append("v=0\r\n");
 		sdpall.append("o=- sessionforreplace sessionforreplace IN IP4 127.0.0.1\r\n");
@@ -76,11 +92,11 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 		sdpall.append("a=mpeg4-esid:tmpforesid\r\n");
 		sdpall.append("a=control:trackID=tmpforstid\r\n");
 
-		DWORD SizeGet = 0;
-		bool fresult = true;
-		fresult = ReadFile(m_hVideoFile, valuetmp, 4096, &SizeGet, NULL);
-
-		if (!fresult || !SizeGet)
+        int SizeGet = 0;
+        //int fresult = 0;
+        SizeGet = fread(valuetmp, sizeof(char), 4096, filefd);
+        printf("Get File %d\n", SizeGet);
+        if (!SizeGet)
 		{
 			perror(filename);
 			break;
@@ -111,8 +127,9 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 			break;
 		}
 
-		CloseHandle(m_hVideoFile);
-
+        //CloseHandle(m_hVideoFile);
+        fclose(filefd);
+        /*
 		HANDLE wf = CreateFile("D://MySession.sdp", 
 			GENERIC_WRITE,	
 			FILE_SHARE_WRITE, NULL,
@@ -126,7 +143,7 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 			CloseHandle(wf);
 			break;
 		}
-		
+
 		DWORD dwSize = 0;
 
 		if(!WriteFile(wf, sdpall.c_str(), sdpall.size(), &dwSize, NULL))
@@ -137,14 +154,14 @@ MediaCreateSdp::MediaCreateSdp(const string& path)
 		}
 
 		CloseHandle(wf);
-
+        */
+        //fclose(filefd);
 		string *KeyName = new string(filename);
 		string *KeyValue = new string(sdpall);
 
 		SdpList.insert(pair<string *, string *>(KeyName, KeyValue));
 
 	} while (0);
-	
 	//_CrtDbgBreak();
 }
 

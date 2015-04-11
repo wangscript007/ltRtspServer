@@ -3,6 +3,7 @@
 
 #define char64(c)  ((c > 127) ? (char) 0xff : index_64[(c)])
 #include "bit/vlc_bits.h"
+#include<sys/types.h>
 #include <string.h>
 using namespace std;
 class BaseEncoder 
@@ -59,7 +60,8 @@ public:
 			j += 4;
 		}
 		out[j] = '\0';
-        *base64 = (uint8_t *)out;
+        base64->clear();
+        base64->append((char *)out);
 		delete [] out;
 		return j;
     };
@@ -74,6 +76,7 @@ public:
 	*\param out_buffer_size output data buffer allocated size
 	*\return size of the decoded buffer
 	*/
+    /*
     inline static uint32_t Base64Decode(const string& base64, uint8_t* pBuffer, uint32_t bufferSize)
 	{
         const uint8_t index_64[128] = {
@@ -124,7 +127,7 @@ public:
 		free(in_buf);
 		return j;
     };
-
+*/
 private:
     inline static uint32_t load_block(uint8_t* in, uint32_t size, uint32_t pos, uint8_t* out)
 	{ 

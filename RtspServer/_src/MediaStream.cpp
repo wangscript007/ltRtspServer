@@ -24,7 +24,8 @@ void MediaStream::DevNode(const Buffer& buf, unsigned pos)
 
 buf_share_ptr MediaStream::GetNode()
 {
-	return NULL;
+    buf_share_ptr p(new Buffer(1));
+    return p;
 }
 
 
